@@ -24,7 +24,7 @@ import type { QuoteParams, MovingOrder, FeeItem } from "@/types";
 export default function NewOrderPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { addOrder } = useOrdersStore();
+  const { addOrder, checkDuplicate } = useOrdersStore();
   const { standard } = useFeeStandardStore();
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -107,6 +107,31 @@ export default function NewOrderPage() {
       totalPrice: quoteResult.total,
       feeBreakdown: quoteResult.items as FeeItem[],
     };
+
+    const duplicateCheck = checkDuplicate(orderData);
+    if (duplicateCheck.isDuplicate) {
+      const duplicateInfo = duplicateCheck.duplicateOrders
+        .map(
+          (o) =>
+            `  • 订单号：${o.id}，状态：${
+              {
+                pending: "待确认",
+                confirmed: "已确认",
+                in_progress: "进行中",
+                completed: "已完成",
+                cancelled: "已取消",
+              }[o.status]
+            }，日期：${o.moveDate || "未安排"}`
+        )
+        .join("\n");
+
+      const confirmed = window.confirm(
+        `⚠️ 检测到重复订单\n\n${duplicateCheck.reason}\n\n已有订单：\n${duplicateInfo}\n\n是否仍要创建新订单？`
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
 
     addOrder(orderData);
     navigate("/orders");

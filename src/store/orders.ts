@@ -3,6 +3,12 @@ import type { MovingOrder, OrderStatus } from "@/types";
 import { storage } from "@/utils/storage";
 import { generateOrderId } from "@/utils/calculator";
 
+interface DuplicateCheckResult {
+  isDuplicate: boolean;
+  duplicateOrders: MovingOrder[];
+  reason: string;
+}
+
 interface OrdersState {
   orders: MovingOrder[];
   addOrder: (order: Omit<MovingOrder, "id" | "createdAt">) => void;
@@ -10,6 +16,7 @@ interface OrdersState {
   deleteOrder: (id: string) => void;
   updateStatus: (id: string, status: OrderStatus) => void;
   getOrder: (id: string) => MovingOrder | undefined;
+  checkDuplicate: (orderData: Omit<MovingOrder, "id" | "createdAt">) => DuplicateCheckResult;
   getStats: () => {
     total: number;
     pending: number;
@@ -66,6 +73,41 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
   getOrder: (id) => {
     return get().orders.find((order) => order.id === id);
+  },
+
+  checkDuplicate: (orderData) => {
+    const { orders } = get();
+    const duplicateOrders: MovingOrder[] = [];
+
+    for (const order of orders) {
+      if (order.status === "cancelled") continue;
+
+      const sameCustomer =
+        order.customerName.trim() === orderData.customerName.trim() &&
+        order.customerPhone.trim() === orderData.customerPhone.trim();
+
+      const sameFloor =
+        order.floorFrom === orderData.floorFrom &&
+        order.floorTo === orderData.floorTo;
+
+      if (sameCustomer && sameFloor) {
+        duplicateOrders.push(order);
+      }
+    }
+
+    if (duplicateOrders.length > 0) {
+      return {
+        isDuplicate: true,
+        duplicateOrders,
+        reason: `已存在相同客户（${orderData.customerName}）且楼层相同（${orderData.floorFrom}层→${orderData.floorTo}层）的订单`,
+      };
+    }
+
+    return {
+      isDuplicate: false,
+      duplicateOrders: [],
+      reason: "",
+    };
   },
 
   getStats: () => {
