@@ -9,8 +9,16 @@ interface FeeStandardState {
   resetStandard: () => void;
 }
 
+function loadStandardWithDefaults(): FeeStandard {
+  const stored = storage.feeStandard.get<Partial<FeeStandard> | null>(null);
+  if (!stored) {
+    return defaultFeeStandard;
+  }
+  return { ...defaultFeeStandard, ...stored };
+}
+
 export const useFeeStandardStore = create<FeeStandardState>((set) => ({
-  standard: storage.feeStandard.get<FeeStandard>(defaultFeeStandard),
+  standard: loadStandardWithDefaults(),
   updateStandard: (updates: Partial<FeeStandard>) =>
     set((state) => {
       const newStandard = { ...state.standard, ...updates };

@@ -15,19 +15,19 @@ function getStorageUnitPrice(
 ): number {
   const priceMap: Record<StorageType, Record<BillingCycle, number>> = {
     normal: {
-      daily: standard.storageNormalDaily,
-      monthly: standard.storageNormalMonthly,
+      daily: standard.storageNormalDaily ?? 5,
+      monthly: standard.storageNormalMonthly ?? 120,
     },
     moisture_proof: {
-      daily: standard.storageMoistureProofDaily,
-      monthly: standard.storageMoistureProofMonthly,
+      daily: standard.storageMoistureProofDaily ?? 8,
+      monthly: standard.storageMoistureProofMonthly ?? 200,
     },
     valuable: {
-      daily: standard.storageValuableDaily,
-      monthly: standard.storageValuableMonthly,
+      daily: standard.storageValuableDaily ?? 15,
+      monthly: standard.storageValuableMonthly ?? 400,
     },
   };
-  return priceMap[type][cycle];
+  return priceMap[type][cycle] || 0;
 }
 
 function calculateDaysBetween(startDate: string, endDate: string): number {

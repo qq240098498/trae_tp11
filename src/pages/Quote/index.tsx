@@ -393,7 +393,15 @@ export default function QuotePage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
+          <div className="card">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+              <Warehouse className="w-5 h-5 text-primary-500" />
+              仓储服务
+            </h2>
+            <div className="space-y-4">
               <div
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   params.needsStorage
@@ -416,58 +424,112 @@ export default function QuotePage() {
                       <Warehouse className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">仓储服务</p>
+                      <p className="font-medium text-gray-900">物品临时仓储</p>
                       <p className="text-sm text-gray-500">
-                        常温仓/防潮仓/贵重物品专属仓
+                        支持按天/按月计费，超期自动累加费用
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-primary-600">
-                      {params.needsStorage ? "已启用" : "可选"}
+                      {params.needsStorage ? "已启用" : "点击启用"}
                     </p>
-                    <p className="text-xs text-gray-400">按天/按月计费</p>
+                    <p className="text-xs text-gray-400">
+                      {params.needsStorage
+                        ? formatCurrency(
+                            (params.billingCycle === "daily"
+                              ? params.storageType === "normal"
+                                ? standard.storageNormalDaily
+                                : params.storageType === "moisture_proof"
+                                ? standard.storageMoistureProofDaily
+                                : standard.storageValuableDaily
+                              : params.storageType === "normal"
+                              ? standard.storageNormalMonthly
+                              : params.storageType === "moisture_proof"
+                              ? standard.storageMoistureProofMonthly
+                              : standard.storageValuableMonthly) *
+                              params.storageDuration *
+                              params.storageItemCount
+                          )
+                        : "查看详情"}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {params.needsStorage && (
-                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-4 animate-slide-up">
+                <div className="space-y-5 animate-slide-up">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      仓储类型
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      选择仓储类型
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {(["normal", "moisture_proof", "valuable"] as StorageType[]).map(
-                        (type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateParam("storageType", type);
-                            }}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              params.storageType === type
-                                ? "bg-primary-500 text-white"
-                                : "bg-white border border-gray-200 text-gray-700 hover:border-primary-300"
-                            }`}
-                          >
-                            {storageTypeLabels[type]}
-                          </button>
-                        )
+                        (type) => {
+                          const dailyPrice =
+                            type === "normal"
+                              ? standard.storageNormalDaily
+                              : type === "moisture_proof"
+                              ? standard.storageMoistureProofDaily
+                              : standard.storageValuableDaily;
+                          const monthlyPrice =
+                            type === "normal"
+                              ? standard.storageNormalMonthly
+                              : type === "moisture_proof"
+                              ? standard.storageMoistureProofMonthly
+                              : standard.storageValuableMonthly;
+                          return (
+                            <div
+                              key={type}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateParam("storageType", type);
+                              }}
+                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                params.storageType === type
+                                  ? "border-primary-500 bg-primary-50"
+                                  : "border-gray-100 hover:border-gray-200"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="font-semibold text-gray-900">
+                                  {storageTypeLabels[type]}
+                                </p>
+                                {params.storageType === type && (
+                                  <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 mb-2">
+                                {storageTypeDescriptions[type]}
+                              </p>
+                              <div className="text-xs space-y-1">
+                                <p className="text-gray-600">
+                                  按天：
+                                  <span className="font-semibold text-primary-600">
+                                    {formatCurrency(dailyPrice)}/件
+                                  </span>
+                                </p>
+                                <p className="text-gray-600">
+                                  按月：
+                                  <span className="font-semibold text-primary-600">
+                                    {formatCurrency(monthlyPrice)}/件
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {storageTypeDescriptions[params.storageType]}
-                    </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
                       计费方式
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       {(["daily", "monthly"] as BillingCycle[]).map((cycle) => (
                         <button
                           key={cycle}
@@ -476,24 +538,26 @@ export default function QuotePage() {
                             e.stopPropagation();
                             updateParam("billingCycle", cycle);
                           }}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                             params.billingCycle === cycle
-                              ? "bg-primary-500 text-white"
-                              : "bg-white border border-gray-200 text-gray-700 hover:border-primary-300"
+                              ? "border-primary-500 bg-primary-50"
+                              : "border-gray-100 hover:border-gray-200 bg-white"
                           }`}
                         >
-                          {billingCycleLabels[cycle]}
+                          <p className="font-semibold text-gray-900 text-center">
+                            {billingCycleLabels[cycle]}
+                          </p>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
                         仓储{params.billingCycle === "daily" ? "天数" : "月数"}
                       </label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -503,30 +567,49 @@ export default function QuotePage() {
                               Math.max(1, params.storageDuration - 1)
                             );
                           }}
-                          className="w-8 h-8 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
+                          className="w-10 h-10 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
                         >
-                          <span className="text-sm font-bold">−</span>
+                          <span className="text-lg font-bold">−</span>
                         </button>
-                        <span className="flex-1 text-center font-bold">
-                          {params.storageDuration}
-                        </span>
+                        <div className="flex-1 text-center">
+                          <span className="text-2xl font-bold text-gray-900">
+                            {params.storageDuration}
+                          </span>
+                          <span className="text-gray-500 ml-1">
+                            {params.billingCycle === "daily" ? "天" : "个月"}
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateParam("storageDuration", params.storageDuration + 1);
+                            updateParam(
+                              "storageDuration",
+                              params.storageDuration + 1
+                            );
                           }}
-                          className="w-8 h-8 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
+                          className="w-10 h-10 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
                         >
-                          <span className="text-sm font-bold">+</span>
+                          <span className="text-lg font-bold">+</span>
                         </button>
                       </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max={params.billingCycle === "daily" ? 180 : 24}
+                        value={params.storageDuration}
+                        onChange={(e) =>
+                          updateParam("storageDuration", Number(e.target.value))
+                        }
+                        className="w-full h-2 mt-4 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                      />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        物品数量
+
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        仓储物品数量
                       </label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -536,25 +619,76 @@ export default function QuotePage() {
                               Math.max(1, params.storageItemCount - 1)
                             );
                           }}
-                          className="w-8 h-8 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
+                          className="w-10 h-10 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
                         >
-                          <span className="text-sm font-bold">−</span>
+                          <span className="text-lg font-bold">−</span>
                         </button>
-                        <span className="flex-1 text-center font-bold">
-                          {params.storageItemCount}件
-                        </span>
+                        <div className="flex-1 text-center">
+                          <span className="text-2xl font-bold text-gray-900">
+                            {params.storageItemCount}
+                          </span>
+                          <span className="text-gray-500 ml-1">件</span>
+                        </div>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateParam("storageItemCount", params.storageItemCount + 1);
+                            updateParam(
+                              "storageItemCount",
+                              params.storageItemCount + 1
+                            );
                           }}
-                          className="w-8 h-8 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
+                          className="w-10 h-10 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
                         >
-                          <span className="text-sm font-bold">+</span>
+                          <span className="text-lg font-bold">+</span>
                         </button>
                       </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="200"
+                        value={params.storageItemCount}
+                        onChange={(e) =>
+                          updateParam("storageItemCount", Number(e.target.value))
+                        }
+                        className="w-full h-2 mt-4 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                      />
                     </div>
+                  </div>
+
+                  <div className="p-4 bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">仓储费用小计</p>
+                        <p className="text-xs text-gray-400">
+                          {storageTypeLabels[params.storageType]} ·{" "}
+                          {billingCycleLabels[params.billingCycle]} ·{" "}
+                          {params.storageDuration}
+                          {params.billingCycle === "daily" ? "天" : "个月"} ×{" "}
+                          {params.storageItemCount}件
+                        </p>
+                      </div>
+                      <p className="text-2xl font-bold text-accent-600">
+                        {formatCurrency(
+                          (params.billingCycle === "daily"
+                            ? params.storageType === "normal"
+                              ? standard.storageNormalDaily
+                              : params.storageType === "moisture_proof"
+                              ? standard.storageMoistureProofDaily
+                              : standard.storageValuableDaily
+                            : params.storageType === "normal"
+                            ? standard.storageNormalMonthly
+                            : params.storageType === "moisture_proof"
+                            ? standard.storageMoistureProofMonthly
+                            : standard.storageValuableMonthly) *
+                            params.storageDuration *
+                            params.storageItemCount
+                        )}
+                      </p>
+                    </div>
+                    <p className="text-xs text-orange-600 mt-2">
+                      ⚠️ 超期部分按 {standard.storageOverdueRate} 倍费率自动累加
+                    </p>
                   </div>
                 </div>
               )}
