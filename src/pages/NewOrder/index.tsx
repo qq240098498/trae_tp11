@@ -561,7 +561,7 @@ export default function NewOrderPage() {
               费用清单
             </h2>
             <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
-              {quoteResult.items.map((item, index) => (
+              {quoteResult.items.map((item) => (
                 <div
                   key={item.name}
                   className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"

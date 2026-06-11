@@ -21,7 +21,7 @@ import {
   DollarSign,
   Edit3,
 } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useDamageClaimsStore } from "@/store/damageClaims";
 import { useOrdersStore } from "@/store/orders";
 import { formatCurrency } from "@/utils/calculator";
@@ -30,6 +30,7 @@ import type {
   DamageStatus,
   DamageType,
   DamageItem,
+  CompensationMethod,
 } from "@/types";
 import {
   damageTypeLabels,
@@ -38,12 +39,12 @@ import {
   damageDegreeLabels,
   damageStatusTransitions,
   damageStatusTransitionLabels,
+  compensationMethodLabels,
 } from "@/types";
 
 type ViewMode = "list" | "create" | "detail";
 
 export default function DamageClaimsPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { claims, addClaim, updateStatus, deleteClaim } = useDamageClaimsStore();
   const { orders } = useOrdersStore();
@@ -63,6 +64,13 @@ export default function DamageClaimsPage() {
   } | null>(null);
   const [handlerName, setHandlerName] = useState("");
   const [handlingNotes, setHandlingNotes] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [compensationMethod, setCompensationMethod] = useState<CompensationMethod>("bank_transfer");
+  const [actualCompensationAmount, setActualCompensationAmount] = useState(0);
+  const [compensationDate, setCompensationDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [compensationReceipt, setCompensationReceipt] = useState("");
 
   const [formData, setFormData] = useState({
     orderId: "",
@@ -232,6 +240,11 @@ export default function DamageClaimsPage() {
     });
     setHandlerName(claim.handler || "");
     setHandlingNotes("");
+    setRejectReason("");
+    setCompensationMethod("bank_transfer");
+    setActualCompensationAmount(claim.compensationAmount);
+    setCompensationDate(new Date().toISOString().split("T")[0]);
+    setCompensationReceipt("");
     setShowStatusMenu(null);
     setShowStatusModal(true);
   };
@@ -239,12 +252,35 @@ export default function DamageClaimsPage() {
   const confirmStatusChange = () => {
     if (!statusModalData) return;
 
-    updateStatus(
-      statusModalData.claimId,
-      statusModalData.targetStatus,
-      handlerName,
-      handlingNotes
-    );
+    if (statusModalData.targetStatus === "rejected") {
+      if (!rejectReason.trim()) {
+        alert("请填写驳回原因");
+        return;
+      }
+    }
+
+    if (statusModalData.targetStatus === "compensated") {
+      if (!actualCompensationAmount || actualCompensationAmount <= 0) {
+        alert("请填写正确的赔付金额");
+        return;
+      }
+      if (!compensationDate) {
+        alert("请选择赔付日期");
+        return;
+      }
+    }
+
+    updateStatus(statusModalData.claimId, statusModalData.targetStatus, {
+      handler: handlerName,
+      handlingNotes,
+      rejectReason,
+      rejectHandler: handlerName,
+      compensationMethod,
+      actualCompensationAmount,
+      compensationDate,
+      compensationHandler: handlerName,
+      compensationReceipt,
+    });
 
     if (selectedClaim?.id === statusModalData.claimId) {
       const updatedClaim = claims.find((c) => c.id === statusModalData.claimId);
@@ -1098,16 +1134,94 @@ export default function DamageClaimsPage() {
                       {formatCurrency(selectedClaim.totalEstimatedValue)}
                     </span>
                   </div>
-                  <div className="bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl p-4 mt-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-700 font-medium">赔偿金额</span>
-                      <span className="text-2xl font-bold text-accent-600">
-                        {formatCurrency(selectedClaim.compensationAmount)}
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-600">拟定赔偿金额</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCurrency(selectedClaim.compensationAmount)}
+                    </span>
+                  </div>
+
+                  {selectedClaim.actualCompensationAmount !== undefined && (
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">实际赔付金额</span>
+                      <span className="font-semibold text-emerald-600">
+                        {formatCurrency(selectedClaim.actualCompensationAmount)}
                       </span>
                     </div>
-                  </div>
+                  )}
+
+                  {selectedClaim.compensationMethod && (
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">赔付方式</span>
+                      <span className="font-semibold text-gray-900">
+                        {compensationMethodLabels[selectedClaim.compensationMethod]}
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedClaim.compensationDate && (
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">赔付日期</span>
+                      <span className="font-semibold text-gray-900">
+                        {selectedClaim.compensationDate}
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedClaim.status === "compensated" && (
+                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 mt-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-emerald-700 font-medium">已赔付</span>
+                        <span className="text-2xl font-bold text-emerald-600">
+                          {formatCurrency(selectedClaim.actualCompensationAmount || selectedClaim.compensationAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedClaim.status !== "compensated" && (
+                    <div className="bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl p-4 mt-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-700 font-medium">赔偿金额</span>
+                        <span className="text-2xl font-bold text-accent-600">
+                          {formatCurrency(selectedClaim.compensationAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {selectedClaim.rejectReason && (
+                <div className="card border-red-200 bg-red-50">
+                  <h2 className="text-lg font-semibold text-red-700 mb-4 flex items-center gap-2">
+                    <XCircle className="w-5 h-5 text-red-500" />
+                    驳回原因
+                  </h2>
+                  <p className="text-gray-700 whitespace-pre-wrap bg-white rounded-lg p-3">
+                    {selectedClaim.rejectReason}
+                  </p>
+                  {selectedClaim.rejectHandler && (
+                    <p className="text-sm text-red-600 mt-3">
+                      驳回处理人: {selectedClaim.rejectHandler}
+                      {selectedClaim.rejectDate &&
+                        ` · ${new Date(selectedClaim.rejectDate).toLocaleDateString(
+                          "zh-CN"
+                        )}`}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {selectedClaim.compensationReceipt && (
+                <div className="card">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-primary-500" />
+                    收款凭证
+                  </h2>
+                  <p className="text-gray-700">{selectedClaim.compensationReceipt}</p>
+                </div>
+              )}
 
               <div className="card">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">状态流转</h2>
@@ -1202,16 +1316,25 @@ export default function DamageClaimsPage() {
 
       {showStatusModal && statusModalData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 animate-scale-in">
-            <div className="p-6 border-b border-gray-100">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">确认状态变更</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {statusModalData.targetStatus === "rejected"
+                    ? "驳回申请"
+                    : statusModalData.targetStatus === "compensated"
+                    ? "确认赔付"
+                    : statusModalData.targetStatus === "approved"
+                    ? "确认赔偿"
+                    : "确认状态变更"}
+                </h2>
                 <button
                   onClick={() => {
                     setShowStatusModal(false);
                     setStatusModalData(null);
                     setHandlerName("");
                     setHandlingNotes("");
+                    setRejectReason("");
                   }}
                   className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
                 >
@@ -1236,8 +1359,28 @@ export default function DamageClaimsPage() {
                 </div>
               </div>
 
-              <div className="p-4 bg-primary-50 rounded-xl">
-                <p className="text-sm text-primary-700">
+              <div
+                className={`p-4 rounded-xl ${
+                  statusModalData.targetStatus === "rejected"
+                    ? "bg-red-50"
+                    : statusModalData.targetStatus === "compensated"
+                    ? "bg-emerald-50"
+                    : statusModalData.targetStatus === "approved"
+                    ? "bg-green-50"
+                    : "bg-primary-50"
+                }`}
+              >
+                <p
+                  className={`text-sm ${
+                    statusModalData.targetStatus === "rejected"
+                      ? "text-red-700"
+                      : statusModalData.targetStatus === "compensated"
+                      ? "text-emerald-700"
+                      : statusModalData.targetStatus === "approved"
+                      ? "text-green-700"
+                      : "text-primary-700"
+                  }`}
+                >
                   <span className="font-semibold">操作：</span>
                   {
                     damageStatusTransitionLabels[statusModalData.currentStatus][
@@ -1250,7 +1393,7 @@ export default function DamageClaimsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
                   <User className="w-4 h-4 text-gray-400" />
-                  处理人
+                  处理人 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1261,6 +1404,99 @@ export default function DamageClaimsPage() {
                 />
               </div>
 
+              {statusModalData.targetStatus === "rejected" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-red-500" />
+                    驳回原因 <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    className="input-field min-h-24 resize-none border-red-200 focus:border-red-400 focus:ring-red-100"
+                    placeholder="请详细填写驳回原因..."
+                    rows={4}
+                  />
+                  <p className="text-xs text-red-500 mt-1">驳回原因是必填项</p>
+                </div>
+              )}
+
+              {(statusModalData.targetStatus === "approved" ||
+                statusModalData.targetStatus === "compensated") && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-gray-400" />
+                    {statusModalData.targetStatus === "compensated"
+                      ? "实际赔付金额"
+                      : "拟定赔偿金额"}{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={actualCompensationAmount}
+                    onChange={(e) =>
+                      setActualCompensationAmount(Number(e.target.value))
+                    }
+                    className="input-field text-lg font-bold"
+                    placeholder="请输入赔偿金额"
+                    min="0"
+                  />
+                </div>
+              )}
+
+              {statusModalData.targetStatus === "compensated" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                      <Package className="w-4 h-4 text-gray-400" />
+                      赔付方式 <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={compensationMethod}
+                      onChange={(e) =>
+                        setCompensationMethod(
+                          e.target.value as CompensationMethod
+                        )
+                      }
+                      className="input-field"
+                    >
+                      {Object.entries(compensationMethodLabels).map(
+                        ([key, label]) => (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      赔付日期 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={compensationDate}
+                      onChange={(e) => setCompensationDate(e.target.value)}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-400" />
+                      收款凭证号/备注
+                    </label>
+                    <input
+                      type="text"
+                      value={compensationReceipt}
+                      onChange={(e) => setCompensationReceipt(e.target.value)}
+                      className="input-field"
+                      placeholder="请输入转账凭证号或收款备注（可选）"
+                    />
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
                   <Edit3 className="w-4 h-4 text-gray-400" />
@@ -1269,19 +1505,20 @@ export default function DamageClaimsPage() {
                 <textarea
                   value={handlingNotes}
                   onChange={(e) => setHandlingNotes(e.target.value)}
-                  className="input-field min-h-24 resize-none"
+                  className="input-field min-h-20 resize-none"
                   placeholder="请输入处理备注（可选）..."
-                  rows={4}
+                  rows={3}
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex gap-3">
+            <div className="p-6 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
               <button
                 onClick={() => {
                   setShowStatusModal(false);
                   setStatusModalData(null);
                   setHandlerName("");
                   setHandlingNotes("");
+                  setRejectReason("");
                 }}
                 className="btn-secondary flex-1"
               >
@@ -1289,9 +1526,19 @@ export default function DamageClaimsPage() {
               </button>
               <button
                 onClick={confirmStatusChange}
-                className="btn-accent flex-1"
+                className={`flex-1 ${
+                  statusModalData.targetStatus === "rejected"
+                    ? "bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-xl font-medium transition-all"
+                    : statusModalData.targetStatus === "compensated"
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium transition-all"
+                    : "btn-accent"
+                }`}
               >
-                确认变更
+                {statusModalData.targetStatus === "rejected"
+                  ? "确认驳回"
+                  : statusModalData.targetStatus === "compensated"
+                  ? "确认赔付完成"
+                  : "确认变更"}
               </button>
             </div>
           </div>

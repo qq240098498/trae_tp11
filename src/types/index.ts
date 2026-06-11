@@ -104,6 +104,8 @@ export type DamageStatus =
   | "rejected"
   | "compensated";
 
+export type CompensationMethod = "cash" | "bank_transfer" | "wechat" | "alipay" | "other";
+
 export interface DamageItem {
   id: string;
   name: string;
@@ -131,9 +133,25 @@ export interface DamageClaim {
   handler?: string;
   handlingNotes?: string;
   handleDate?: string;
+  rejectReason?: string;
+  rejectDate?: string;
+  rejectHandler?: string;
+  compensationMethod?: CompensationMethod;
+  actualCompensationAmount?: number;
+  compensationDate?: string;
+  compensationHandler?: string;
+  compensationReceipt?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export const compensationMethodLabels: Record<CompensationMethod, string> = {
+  cash: "现金",
+  bank_transfer: "银行转账",
+  wechat: "微信支付",
+  alipay: "支付宝",
+  other: "其他",
+};
 
 export const damageTypeLabels: Record<DamageType, string> = {
   damage: "物品损坏",
