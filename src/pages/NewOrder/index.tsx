@@ -21,7 +21,7 @@ import { useOrdersStore } from "@/store/orders";
 import { useFeeStandardStore } from "@/store/feeStandard";
 import { formatCurrency } from "@/utils/calculator";
 import { calculateOrderTotalApi, getStoragePriceDisplayApi, validateStorageOverdue } from "@/api";
-import type { QuoteParams, MovingOrder, FeeItem, StorageType, BillingCycle } from "@/types";
+import type { QuoteParams, MovingOrder, FeeItem, StorageType, BillingCycle, ServiceType } from "@/types";
 import { storageTypeLabels, storageTypeDescriptions, billingCycleLabels } from "@/types";
 
 export default function NewOrderPage() {
@@ -56,6 +56,9 @@ export default function NewOrderPage() {
     storageStartDate: "",
     storageEndDate: "",
     status: "pending" as const,
+    serviceType: "standard" as ServiceType,
+    region: "",
+    workerName: "",
   });
 
   useEffect(() => {
@@ -137,6 +140,9 @@ export default function NewOrderPage() {
       status: formData.status,
       totalPrice: quoteResult.total,
       feeBreakdown: quoteResult.items as FeeItem[],
+      serviceType: formData.serviceType,
+      region: formData.region || "未分配",
+      workerName: formData.workerName || "未分配",
     };
 
     const duplicateCheck = checkDuplicate(orderData);

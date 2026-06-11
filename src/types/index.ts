@@ -74,37 +74,6 @@ export type OrderStatus =
   | "completed"
   | "cancelled";
 
-export interface MovingOrder {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  fromAddress: string;
-  toAddress: string;
-  moveDate: string;
-  floorFrom: number;
-  floorTo: number;
-  hasElevatorFrom: boolean;
-  hasElevatorTo: boolean;
-  distance: number;
-  itemCount: number;
-  needsDisassembly: boolean;
-  hasLargeItems: boolean;
-  largeItemCount: number;
-  isNightService: boolean;
-  needsStorage: boolean;
-  storageType: StorageType;
-  billingCycle: BillingCycle;
-  storageDuration: number;
-  storageItemCount: number;
-  storageStartDate: string;
-  storageEndDate: string;
-  notes: string;
-  status: OrderStatus;
-  totalPrice: number;
-  feeBreakdown: FeeItem[];
-  createdAt: string;
-}
-
 export const statusLabels: Record<OrderStatus, string> = {
   pending: "待确认",
   confirmed: "已确认",
@@ -272,3 +241,73 @@ export const damageStatusTransitionLabels: Record<DamageStatus, Record<DamageSta
     compensated: "已赔偿",
   },
 };
+
+export type ServiceType = "standard" | "premium" | "international" | "storage_only" | "disassembly_only";
+
+export const serviceTypeLabels: Record<ServiceType, string> = {
+  standard: "标准搬家",
+  premium: "精品搬家",
+  international: "国际搬家",
+  storage_only: "仅仓储",
+  disassembly_only: "拆装服务",
+};
+
+export interface MovingOrder {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  fromAddress: string;
+  toAddress: string;
+  moveDate: string;
+  floorFrom: number;
+  floorTo: number;
+  hasElevatorFrom: boolean;
+  hasElevatorTo: boolean;
+  distance: number;
+  itemCount: number;
+  needsDisassembly: boolean;
+  hasLargeItems: boolean;
+  largeItemCount: number;
+  isNightService: boolean;
+  needsStorage: boolean;
+  storageType: StorageType;
+  billingCycle: BillingCycle;
+  storageDuration: number;
+  storageItemCount: number;
+  storageStartDate: string;
+  storageEndDate: string;
+  notes: string;
+  status: OrderStatus;
+  totalPrice: number;
+  feeBreakdown: FeeItem[];
+  createdAt: string;
+  serviceType: ServiceType;
+  region: string;
+  workerName: string;
+}
+
+export interface DailyOrderTrend {
+  date: string;
+  count: number;
+}
+
+export interface DailyRevenue {
+  date: string;
+  revenue: number;
+}
+
+export interface ServiceTypeStat {
+  name: string;
+  value: number;
+}
+
+export interface RegionOrderStat {
+  region: string;
+  count: number;
+}
+
+export interface WorkerRankStat {
+  name: string;
+  orders: number;
+  revenue: number;
+}

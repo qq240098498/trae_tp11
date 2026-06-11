@@ -7,6 +7,7 @@ import {
   Truck,
   PlusCircle,
   AlertTriangle,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,11 @@ const navItems = [
     path: "/",
     label: "仪表盘",
     icon: LayoutDashboard,
+  },
+  {
+    path: "/operation-board",
+    label: "运营看板",
+    icon: BarChart3,
   },
   {
     path: "/quote",
