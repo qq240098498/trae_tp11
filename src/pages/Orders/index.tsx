@@ -17,6 +17,7 @@ import {
   User,
   ChevronDown,
   PlusCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOrdersStore } from "@/store/orders";
@@ -423,6 +424,20 @@ export default function OrdersPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <h3 className="font-semibold text-gray-900 mb-3">快捷操作</h3>
+                <button
+                  onClick={() => {
+                    setSelectedOrder(null);
+                    navigate(`/damage-claims?orderId=${selectedOrder.id}`);
+                  }}
+                  className="w-full btn-accent flex items-center justify-center gap-2"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  登记损坏/丢失物品
+                </button>
               </div>
             </div>
           </div>

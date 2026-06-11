@@ -1,6 +1,7 @@
 const STORAGE_KEYS = {
   FEE_STANDARD: "moving_fee_standard",
   ORDERS: "moving_orders",
+  DAMAGE_CLAIMS: "moving_damage_claims",
 };
 
 export function getFromStorage<T>(key: string, defaultValue: T): T {
@@ -41,5 +42,10 @@ export const storage = {
     get: <T>(defaultValue: T) =>
       getFromStorage<T>(STORAGE_KEYS.ORDERS, defaultValue),
     set: <T>(value: T) => setToStorage<T>(STORAGE_KEYS.ORDERS, value),
+  },
+  damageClaims: {
+    get: <T>(defaultValue: T) =>
+      getFromStorage<T>(STORAGE_KEYS.DAMAGE_CLAIMS, defaultValue),
+    set: <T>(value: T) => setToStorage<T>(STORAGE_KEYS.DAMAGE_CLAIMS, value),
   },
 };

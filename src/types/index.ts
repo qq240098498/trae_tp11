@@ -94,3 +94,71 @@ export const defaultFeeStandard: FeeStandard = {
   largeItemFee: 100,
   nightServiceFee: 150,
 };
+
+export type DamageType = "damage" | "loss";
+
+export type DamageStatus =
+  | "pending"
+  | "investigating"
+  | "approved"
+  | "rejected"
+  | "compensated";
+
+export interface DamageItem {
+  id: string;
+  name: string;
+  quantity: number;
+  estimatedValue: number;
+  damageDegree: "minor" | "moderate" | "severe" | "total_loss";
+  description: string;
+  photoUrls?: string[];
+}
+
+export interface DamageClaim {
+  id: string;
+  orderId: string;
+  customerName: string;
+  customerPhone: string;
+  type: DamageType;
+  items: DamageItem[];
+  totalEstimatedValue: number;
+  compensationAmount: number;
+  status: DamageStatus;
+  reportedBy: string;
+  reportDate: string;
+  incidentDate: string;
+  incidentDescription: string;
+  handler?: string;
+  handlingNotes?: string;
+  handleDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const damageTypeLabels: Record<DamageType, string> = {
+  damage: "物品损坏",
+  loss: "物品丢失",
+};
+
+export const damageStatusLabels: Record<DamageStatus, string> = {
+  pending: "待处理",
+  investigating: "调查中",
+  approved: "已确认",
+  rejected: "已驳回",
+  compensated: "已赔偿",
+};
+
+export const damageStatusColors: Record<DamageStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  investigating: "bg-blue-100 text-blue-800",
+  approved: "bg-green-100 text-green-800",
+  rejected: "bg-gray-100 text-gray-600",
+  compensated: "bg-emerald-100 text-emerald-800",
+};
+
+export const damageDegreeLabels: Record<DamageItem["damageDegree"], string> = {
+  minor: "轻微损坏",
+  moderate: "中度损坏",
+  severe: "严重损坏",
+  total_loss: "完全损坏/丢失",
+};

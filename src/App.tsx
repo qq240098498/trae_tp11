@@ -5,6 +5,7 @@ import Quote from "@/pages/Quote";
 import Orders from "@/pages/Orders";
 import NewOrder from "@/pages/NewOrder";
 import Standards from "@/pages/Standards";
+import DamageClaims from "@/pages/DamageClaims";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="quote" element={<Quote />} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/new" element={<NewOrder />} />
+          <Route path="damage-claims" element={<DamageClaims />} />
           <Route path="standards" element={<Standards />} />
         </Route>
       </Routes>

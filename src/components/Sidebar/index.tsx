@@ -6,6 +6,7 @@ import {
   Settings,
   Truck,
   PlusCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,11 @@ const navItems = [
     path: "/orders/new",
     label: "新建订单",
     icon: PlusCircle,
+  },
+  {
+    path: "/damage-claims",
+    label: "损坏丢失登记",
+    icon: AlertTriangle,
   },
   {
     path: "/standards",
