@@ -24,6 +24,7 @@ function pickRandom<T>(arr: T[]): T {
 }
 
 interface DuplicateCheckResult {
+  
   isDuplicate: boolean;
   duplicateOrders: MovingOrder[];
   reason: string;
