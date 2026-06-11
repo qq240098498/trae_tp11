@@ -10,6 +10,7 @@ import {
   Save,
   RotateCcw,
   CheckCircle,
+  Warehouse,
 } from "lucide-react";
 import { useFeeStandardStore } from "@/store/feeStandard";
 import { formatCurrency } from "@/utils/calculator";
@@ -138,6 +139,54 @@ export default function StandardsPage() {
         },
       ],
     },
+    {
+      title: "仓储服务",
+      icon: Warehouse,
+      items: [
+        {
+          key: "storageNormalDaily" as const,
+          label: "常温仓（按天）",
+          unit: "元/天·件",
+          description: "普通物品日常温仓储",
+        },
+        {
+          key: "storageNormalMonthly" as const,
+          label: "常温仓（按月）",
+          unit: "元/月·件",
+          description: "普通物品月常温仓储",
+        },
+        {
+          key: "storageMoistureProofDaily" as const,
+          label: "防潮仓（按天）",
+          unit: "元/天·件",
+          description: "防潮处理日常仓储",
+        },
+        {
+          key: "storageMoistureProofMonthly" as const,
+          label: "防潮仓（按月）",
+          unit: "元/月·件",
+          description: "防潮处理月仓储",
+        },
+        {
+          key: "storageValuableDaily" as const,
+          label: "贵重物品仓（按天）",
+          unit: "元/天·件",
+          description: "贵重物品专属仓储日结",
+        },
+        {
+          key: "storageValuableMonthly" as const,
+          label: "贵重物品仓（按月）",
+          unit: "元/月·件",
+          description: "贵重物品专属仓储月结",
+        },
+        {
+          key: "storageOverdueRate" as const,
+          label: "超期费率倍数",
+          unit: "倍",
+          description: "超期后费用倍率",
+        },
+      ],
+    },
   ];
 
   return (
@@ -204,10 +253,13 @@ export default function StandardsPage() {
                       }
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-lg font-semibold text-gray-900"
                       min="0"
+                      step={item.unit === "倍" ? "0.1" : "1"}
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                      ¥
-                    </span>
+                    {!item.unit.includes("倍") && !item.unit.includes("公里") && !item.unit.includes("件") && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                        ¥
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 mt-1.5">
                     {item.description}

@@ -1,4 +1,88 @@
-import type { FeeStandard, QuoteParams, QuoteResult, FeeItem } from "@/types";
+import type {
+  FeeStandard,
+  QuoteParams,
+  QuoteResult,
+  FeeItem,
+  StorageType,
+  BillingCycle,
+} from "@/types";
+import { storageTypeLabels, billingCycleLabels } from "@/types";
+
+function getStorageUnitPrice(
+  type: StorageType,
+  cycle: BillingCycle,
+  standard: FeeStandard
+): number {
+  const priceMap: Record<StorageType, Record<BillingCycle, number>> = {
+    normal: {
+      daily: standard.storageNormalDaily,
+      monthly: standard.storageNormalMonthly,
+    },
+    moisture_proof: {
+      daily: standard.storageMoistureProofDaily,
+      monthly: standard.storageMoistureProofMonthly,
+    },
+    valuable: {
+      daily: standard.storageValuableDaily,
+      monthly: standard.storageValuableMonthly,
+    },
+  };
+  return priceMap[type][cycle];
+}
+
+function calculateDaysBetween(startDate: string, endDate: string): number {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
+
+export function calculateStorageFee(
+  params: {
+    storageType: StorageType;
+    billingCycle: BillingCycle;
+    storageDuration: number;
+    storageItemCount: number;
+    storageStartDate?: string;
+    storageEndDate?: string;
+  },
+  standard: FeeStandard
+): { items: FeeItem[]; total: number } {
+  const items: FeeItem[] = [];
+  const unitPrice = getStorageUnitPrice(params.storageType, params.billingCycle, standard);
+  const baseFee = unitPrice * params.storageDuration * params.storageItemCount;
+
+  items.push({
+    name: `${storageTypeLabels[params.storageType]}仓储费`,
+    amount: baseFee,
+    description: `${billingCycleLabels[params.billingCycle]} × ${params.storageDuration}${params.billingCycle === "daily" ? "天" : "月"} × ${params.storageItemCount}件 × ${unitPrice}元/${params.billingCycle === "daily" ? "天·件" : "月·件"}`,
+  });
+
+  let overdueDays = 0;
+  if (params.storageStartDate && params.storageEndDate) {
+    const actualDays = calculateDaysBetween(params.storageStartDate, params.storageEndDate);
+    const plannedDays = params.billingCycle === "monthly" 
+      ? params.storageDuration * 30 
+      : params.storageDuration;
+    
+    if (actualDays > plannedDays) {
+      overdueDays = actualDays - plannedDays;
+      const dailyUnitPrice = getStorageUnitPrice(params.storageType, "daily", standard);
+      const overdueFee = overdueDays * dailyUnitPrice * params.storageItemCount * standard.storageOverdueRate;
+      
+      items.push({
+        name: "仓储超期费",
+        amount: overdueFee,
+        description: `超期${overdueDays}天 × ${params.storageItemCount}件 × ${dailyUnitPrice}元/天·件 × ${standard.storageOverdueRate}倍费率`,
+      });
+    }
+  }
+
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+  return { items, total };
+}
 
 export function calculateQuote(
   params: QuoteParams,
@@ -80,6 +164,19 @@ export function calculateQuote(
       amount: standard.nightServiceFee,
       description: "夜间时段搬家服务",
     });
+  }
+
+  if (params.needsStorage) {
+    const storageResult = calculateStorageFee(
+      {
+        storageType: params.storageType,
+        billingCycle: params.billingCycle,
+        storageDuration: params.storageDuration,
+        storageItemCount: params.storageItemCount,
+      },
+      standard
+    );
+    items.push(...storageResult.items);
   }
 
   const total = items.reduce((sum, item) => sum + item.amount, 0);

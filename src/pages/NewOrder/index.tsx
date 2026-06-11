@@ -15,11 +15,13 @@ import {
   X,
   FileText,
   Calculator,
+  Warehouse,
 } from "lucide-react";
 import { useOrdersStore } from "@/store/orders";
 import { useFeeStandardStore } from "@/store/feeStandard";
 import { calculateQuote, formatCurrency } from "@/utils/calculator";
-import type { QuoteParams, MovingOrder, FeeItem } from "@/types";
+import type { QuoteParams, MovingOrder, FeeItem, StorageType, BillingCycle } from "@/types";
+import { storageTypeLabels, storageTypeDescriptions, billingCycleLabels } from "@/types";
 
 export default function NewOrderPage() {
   const navigate = useNavigate();
@@ -45,6 +47,13 @@ export default function NewOrderPage() {
     hasLargeItems: false,
     largeItemCount: 0,
     isNightService: false,
+    needsStorage: false,
+    storageType: "normal" as StorageType,
+    billingCycle: "daily" as BillingCycle,
+    storageDuration: 7,
+    storageItemCount: 10,
+    storageStartDate: "",
+    storageEndDate: "",
     status: "pending" as const,
   });
 
@@ -72,6 +81,11 @@ export default function NewOrderPage() {
       hasLargeItems: formData.hasLargeItems,
       largeItemCount: formData.largeItemCount,
       isNightService: formData.isNightService,
+      needsStorage: formData.needsStorage,
+      storageType: formData.storageType,
+      billingCycle: formData.billingCycle,
+      storageDuration: formData.storageDuration,
+      storageItemCount: formData.storageItemCount,
     };
     return calculateQuote(params, standard);
   }, [formData, standard]);
@@ -102,6 +116,13 @@ export default function NewOrderPage() {
       hasLargeItems: formData.hasLargeItems,
       largeItemCount: formData.largeItemCount,
       isNightService: formData.isNightService,
+      needsStorage: formData.needsStorage,
+      storageType: formData.storageType,
+      billingCycle: formData.billingCycle,
+      storageDuration: formData.storageDuration,
+      storageItemCount: formData.storageItemCount,
+      storageStartDate: formData.storageStartDate,
+      storageEndDate: formData.storageEndDate,
       notes: formData.notes,
       status: formData.status,
       totalPrice: quoteResult.total,
@@ -536,6 +557,238 @@ export default function NewOrderPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="card">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                  <Warehouse className="w-5 h-5 text-primary-500" />
+                  仓储服务
+                </h2>
+                <div
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all mb-4 ${
+                    formData.needsStorage
+                      ? "border-primary-500 bg-primary-50"
+                      : "border-gray-100 hover:border-gray-200"
+                  }`}
+                  onClick={() =>
+                    handleInputChange("needsStorage", !formData.needsStorage)
+                  }
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        formData.needsStorage
+                          ? "bg-primary-500 text-white"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      <Warehouse className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">启用物品临时仓储</p>
+                      <p className="text-xs text-gray-500">
+                        支持常温仓、防潮仓、贵重物品专属仓
+                      </p>
+                    </div>
+                    {formData.needsStorage && (
+                      <div className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {formData.needsStorage && (
+                  <div className="space-y-5 animate-slide-up">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        选择仓储类型
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {(["normal", "moisture_proof", "valuable"] as StorageType[]).map(
+                          (type) => (
+                            <div
+                              key={type}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleInputChange("storageType", type);
+                              }}
+                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                formData.storageType === type
+                                  ? "border-primary-500 bg-primary-50"
+                                  : "border-gray-100 hover:border-gray-200"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="font-semibold text-gray-900">
+                                  {storageTypeLabels[type]}
+                                </p>
+                                {formData.storageType === type && (
+                                  <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 mb-2">
+                                {storageTypeDescriptions[type]}
+                              </p>
+                              <div className="text-xs space-y-1">
+                                <p className="text-gray-600">
+                                  按天：
+                                  <span className="font-semibold text-primary-600">
+                                    {formatCurrency(
+                                      type === "normal"
+                                        ? standard.storageNormalDaily
+                                        : type === "moisture_proof"
+                                        ? standard.storageMoistureProofDaily
+                                        : standard.storageValuableDaily
+                                    )}
+                                    /件
+                                  </span>
+                                </p>
+                                <p className="text-gray-600">
+                                  按月：
+                                  <span className="font-semibold text-primary-600">
+                                    {formatCurrency(
+                                      type === "normal"
+                                        ? standard.storageNormalMonthly
+                                        : type === "moisture_proof"
+                                        ? standard.storageMoistureProofMonthly
+                                        : standard.storageValuableMonthly
+                                    )}
+                                    /件
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        计费方式
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {(["daily", "monthly"] as BillingCycle[]).map((cycle) => (
+                          <div
+                            key={cycle}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleInputChange("billingCycle", cycle);
+                            }}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all text-center ${
+                              formData.billingCycle === cycle
+                                ? "border-primary-500 bg-primary-50"
+                                : "border-gray-100 hover:border-gray-200"
+                            }`}
+                          >
+                            <p className="font-semibold text-gray-900">
+                              {billingCycleLabels[cycle]}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          仓储{formData.billingCycle === "daily" ? "天数" : "月数"}
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.storageDuration}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "storageDuration",
+                              Math.max(1, Number(e.target.value))
+                            )
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          className="input-field"
+                          min="1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          仓储物品数量 (件)
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.storageItemCount}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "storageItemCount",
+                              Math.max(1, Number(e.target.value))
+                            )
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          className="input-field"
+                          min="1"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          入仓日期
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.storageStartDate}
+                          onChange={(e) =>
+                            handleInputChange("storageStartDate", e.target.value)
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          className="input-field"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          预计出仓日期
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.storageEndDate}
+                          onChange={(e) =>
+                            handleInputChange("storageEndDate", e.target.value)
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
+
+                    {formData.storageStartDate &&
+                      formData.storageEndDate &&
+                      (() => {
+                        const start = new Date(formData.storageStartDate);
+                        const end = new Date(formData.storageEndDate);
+                        const actualDays = Math.ceil(
+                          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+                        );
+                        const plannedDays =
+                          formData.billingCycle === "monthly"
+                            ? formData.storageDuration * 30
+                            : formData.storageDuration;
+                        if (actualDays > plannedDays) {
+                          return (
+                            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                              <p className="text-sm text-orange-700">
+                                ⚠️ 超期预警：预计存储 {actualDays} 天，超出约定{" "}
+                                {formData.billingCycle === "daily" ? `${formData.storageDuration} 天` : `${formData.storageDuration} 个月（${plannedDays}天）`}，
+                                超期 {actualDays - plannedDays} 天将按 {standard.storageOverdueRate} 倍费率累加
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-4">

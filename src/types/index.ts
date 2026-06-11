@@ -1,3 +1,23 @@
+export type StorageType = "normal" | "moisture_proof" | "valuable";
+export type BillingCycle = "daily" | "monthly";
+
+export const storageTypeLabels: Record<StorageType, string> = {
+  normal: "常温仓",
+  moisture_proof: "防潮仓",
+  valuable: "贵重物品专属仓",
+};
+
+export const storageTypeDescriptions: Record<StorageType, string> = {
+  normal: "普通物品存储，常温环境",
+  moisture_proof: "防潮处理，适合家具、衣物等",
+  valuable: "独立仓储空间，24小时监控",
+};
+
+export const billingCycleLabels: Record<BillingCycle, string> = {
+  daily: "按天计费",
+  monthly: "按月计费",
+};
+
 export interface FeeStandard {
   basePrice: number;
   floorFee: number;
@@ -9,6 +29,13 @@ export interface FeeStandard {
   disassemblyFee: number;
   largeItemFee: number;
   nightServiceFee: number;
+  storageNormalDaily: number;
+  storageNormalMonthly: number;
+  storageMoistureProofDaily: number;
+  storageMoistureProofMonthly: number;
+  storageValuableDaily: number;
+  storageValuableMonthly: number;
+  storageOverdueRate: number;
 }
 
 export interface QuoteParams {
@@ -22,6 +49,11 @@ export interface QuoteParams {
   hasLargeItems: boolean;
   largeItemCount: number;
   isNightService: boolean;
+  needsStorage: boolean;
+  storageType: StorageType;
+  billingCycle: BillingCycle;
+  storageDuration: number;
+  storageItemCount: number;
 }
 
 export interface FeeItem {
@@ -59,6 +91,13 @@ export interface MovingOrder {
   hasLargeItems: boolean;
   largeItemCount: number;
   isNightService: boolean;
+  needsStorage: boolean;
+  storageType: StorageType;
+  billingCycle: BillingCycle;
+  storageDuration: number;
+  storageItemCount: number;
+  storageStartDate: string;
+  storageEndDate: string;
   notes: string;
   status: OrderStatus;
   totalPrice: number;
@@ -93,6 +132,13 @@ export const defaultFeeStandard: FeeStandard = {
   disassemblyFee: 200,
   largeItemFee: 100,
   nightServiceFee: 150,
+  storageNormalDaily: 5,
+  storageNormalMonthly: 120,
+  storageMoistureProofDaily: 8,
+  storageMoistureProofMonthly: 200,
+  storageValuableDaily: 15,
+  storageValuableMonthly: 400,
+  storageOverdueRate: 1.5,
 };
 
 export type DamageType = "damage" | "loss";
