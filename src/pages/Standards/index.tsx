@@ -11,9 +11,11 @@ import {
   RotateCcw,
   CheckCircle,
   Warehouse,
+  AlertCircle,
 } from "lucide-react";
 import { useFeeStandardStore } from "@/store/feeStandard";
 import { formatCurrency } from "@/utils/calculator";
+import { updateFeeStandardApi } from "@/api";
 import type { FeeStandard } from "@/types";
 import { defaultFeeStandard } from "@/types";
 
@@ -21,14 +23,22 @@ export default function StandardsPage() {
   const { standard, updateStandard, resetStandard } = useFeeStandardStore();
   const [formData, setFormData] = useState<FeeStandard>(standard);
   const [saved, setSaved] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleChange = (key: keyof FeeStandard, value: number) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
+    setValidationError(null);
   };
 
   const handleSave = () => {
-    updateStandard(formData);
+    const validation = updateFeeStandardApi(formData);
+    if (!validation.success) {
+      setValidationError(validation.error ?? "验证失败");
+      return;
+    }
+    setValidationError(null);
+    updateStandard(validation.data!);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -37,6 +47,7 @@ export default function StandardsPage() {
     if (window.confirm("确定要恢复默认费用标准吗？")) {
       resetStandard();
       setFormData(defaultFeeStandard);
+      setValidationError(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -219,6 +230,16 @@ export default function StandardsPage() {
           </button>
         </div>
       </div>
+
+      {validationError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-700">费用标准验证失败</p>
+            <p className="text-sm text-red-600 mt-1">{validationError}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sections.map((section, sectionIndex) => (

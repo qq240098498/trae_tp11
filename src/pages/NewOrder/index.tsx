@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import { useOrdersStore } from "@/store/orders";
 import { useFeeStandardStore } from "@/store/feeStandard";
-import { calculateQuote, formatCurrency } from "@/utils/calculator";
+import { formatCurrency } from "@/utils/calculator";
+import { calculateOrderTotalApi, getStoragePriceDisplayApi, validateStorageOverdue } from "@/api";
 import type { QuoteParams, MovingOrder, FeeItem, StorageType, BillingCycle } from "@/types";
 import { storageTypeLabels, storageTypeDescriptions, billingCycleLabels } from "@/types";
 
@@ -87,7 +88,16 @@ export default function NewOrderPage() {
       storageDuration: formData.storageDuration,
       storageItemCount: formData.storageItemCount,
     };
-    return calculateQuote(params, standard);
+    const result = calculateOrderTotalApi(
+      params,
+      standard,
+      formData.needsStorage ? formData.storageStartDate : undefined,
+      formData.needsStorage ? formData.storageEndDate : undefined
+    );
+    if (result.success && result.data) {
+      return result.data;
+    }
+    return { items: [], total: 0 };
   }, [formData, standard]);
 
   const handleInputChange = (key: string, value: string | number | boolean) => {
@@ -636,26 +646,14 @@ export default function NewOrderPage() {
                                 <p className="text-gray-600">
                                   按天：
                                   <span className="font-semibold text-primary-600">
-                                    {formatCurrency(
-                                      type === "normal"
-                                        ? standard.storageNormalDaily
-                                        : type === "moisture_proof"
-                                        ? standard.storageMoistureProofDaily
-                                        : standard.storageValuableDaily
-                                    )}
+                                    {formatCurrency(getStoragePriceDisplayApi(type, standard).dailyPrice)}
                                     /件
                                   </span>
                                 </p>
                                 <p className="text-gray-600">
                                   按月：
                                   <span className="font-semibold text-primary-600">
-                                    {formatCurrency(
-                                      type === "normal"
-                                        ? standard.storageNormalMonthly
-                                        : type === "moisture_proof"
-                                        ? standard.storageMoistureProofMonthly
-                                        : standard.storageValuableMonthly
-                                    )}
+                                    {formatCurrency(getStoragePriceDisplayApi(type, standard).monthlyPrice)}
                                     /件
                                   </span>
                                 </p>
@@ -765,22 +763,27 @@ export default function NewOrderPage() {
                     {formData.storageStartDate &&
                       formData.storageEndDate &&
                       (() => {
-                        const start = new Date(formData.storageStartDate);
-                        const end = new Date(formData.storageEndDate);
-                        const actualDays = Math.ceil(
-                          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+                        const overdueResult = validateStorageOverdue(
+                          formData.storageType,
+                          formData.billingCycle,
+                          formData.storageDuration,
+                          formData.storageItemCount,
+                          formData.storageStartDate,
+                          formData.storageEndDate,
+                          standard
                         );
-                        const plannedDays =
-                          formData.billingCycle === "monthly"
-                            ? formData.storageDuration * 30
-                            : formData.storageDuration;
-                        if (actualDays > plannedDays) {
+                        if (overdueResult.success && overdueResult.data && overdueResult.data.overdueFee > 0) {
+                          const { overdueDays } = overdueResult.data;
+                          const plannedDays =
+                            formData.billingCycle === "monthly"
+                              ? formData.storageDuration * 30
+                              : formData.storageDuration;
                           return (
                             <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
                               <p className="text-sm text-orange-700">
-                                ⚠️ 超期预警：预计存储 {actualDays} 天，超出约定{" "}
+                                ⚠️ 超期预警：预计存储 {plannedDays + overdueDays} 天，超出约定{" "}
                                 {formData.billingCycle === "daily" ? `${formData.storageDuration} 天` : `${formData.storageDuration} 个月（${plannedDays}天）`}，
-                                超期 {actualDays - plannedDays} 天将按 {standard.storageOverdueRate} 倍费率累加
+                                超期 {overdueDays} 天将按 {standard.storageOverdueRate} 倍费率累加
                               </p>
                             </div>
                           );

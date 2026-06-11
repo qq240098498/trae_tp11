@@ -25,6 +25,7 @@ import { useSearchParams } from "react-router-dom";
 import { useDamageClaimsStore } from "@/store/damageClaims";
 import { useOrdersStore } from "@/store/orders";
 import { formatCurrency } from "@/utils/calculator";
+import { validateCompensationApi } from "@/api";
 import type {
   DamageClaim,
   DamageStatus,
@@ -189,6 +190,13 @@ export default function DamageClaimsPage() {
       return;
     }
 
+    const finalCompensation = formData.compensationAmount || totalEstimatedValue;
+    const compensationValidation = validateCompensationApi(finalCompensation, totalEstimatedValue);
+    if (!compensationValidation.success) {
+      alert(`赔偿金额验证失败：${compensationValidation.error}`);
+      return;
+    }
+
     const claimData: Omit<DamageClaim, "id" | "createdAt" | "updatedAt"> = {
       orderId: formData.orderId,
       customerName: formData.customerName,
@@ -196,7 +204,7 @@ export default function DamageClaimsPage() {
       type: formData.type,
       items: formData.items,
       totalEstimatedValue,
-      compensationAmount: formData.compensationAmount || totalEstimatedValue,
+      compensationAmount: compensationValidation.data!,
       status: "pending",
       reportedBy: formData.reportedBy || "系统管理员",
       reportDate: new Date().toISOString().split("T")[0],
@@ -267,6 +275,17 @@ export default function DamageClaimsPage() {
       if (!compensationDate) {
         alert("请选择赔付日期");
         return;
+      }
+      const claim = claims.find((c) => c.id === statusModalData.claimId);
+      if (claim) {
+        const amountValidation = validateCompensationApi(
+          actualCompensationAmount,
+          claim.totalEstimatedValue
+        );
+        if (!amountValidation.success) {
+          alert(`赔付金额验证失败：${amountValidation.error}`);
+          return;
+        }
       }
     }
 

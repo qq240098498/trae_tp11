@@ -13,11 +13,15 @@ import {
   Check,
   X,
   Warehouse,
+  AlertCircle,
 } from "lucide-react";
 import { useFeeStandardStore } from "@/store/feeStandard";
-import { calculateQuote, formatCurrency } from "@/utils/calculator";
-import type { QuoteParams, StorageType, BillingCycle } from "@/types";
+import { formatCurrency } from "@/utils/calculator";
+import { calculateQuoteApi, calculateStorageSubtotalApi, getStoragePriceDisplayApi } from "@/api";
+import type { QuoteParams, QuoteResult, StorageType, BillingCycle } from "@/types";
 import { storageTypeLabels, storageTypeDescriptions, billingCycleLabels } from "@/types";
+
+const defaultQuoteResult: QuoteResult = { items: [], total: 0 };
 
 export default function QuotePage() {
   const navigate = useNavigate();
@@ -41,10 +45,13 @@ export default function QuotePage() {
     storageItemCount: 10,
   });
 
-  const quoteResult = useMemo(
-    () => calculateQuote(params, standard),
-    [params, standard]
-  );
+  const { quoteResult, error } = useMemo(() => {
+    const result = calculateQuoteApi(params, standard);
+    if (result.success && result.data) {
+      return { quoteResult: result.data, error: null };
+    }
+    return { quoteResult: defaultQuoteResult, error: result.error ?? null };
+  }, [params, standard]);
 
   const updateParam = <K extends keyof QuoteParams>(
     key: K,
@@ -132,6 +139,16 @@ export default function QuotePage() {
           <p className="text-gray-500 mt-1">根据搬家参数自动计算费用</p>
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-700">计费参数错误</p>
+            <p className="text-sm text-red-600 mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -437,19 +454,13 @@ export default function QuotePage() {
                     <p className="text-xs text-gray-400">
                       {params.needsStorage
                         ? formatCurrency(
-                            (params.billingCycle === "daily"
-                              ? params.storageType === "normal"
-                                ? standard.storageNormalDaily
-                                : params.storageType === "moisture_proof"
-                                ? standard.storageMoistureProofDaily
-                                : standard.storageValuableDaily
-                              : params.storageType === "normal"
-                              ? standard.storageNormalMonthly
-                              : params.storageType === "moisture_proof"
-                              ? standard.storageMoistureProofMonthly
-                              : standard.storageValuableMonthly) *
-                              params.storageDuration *
-                              params.storageItemCount
+                            calculateStorageSubtotalApi(
+                              params.storageType,
+                              params.billingCycle,
+                              params.storageDuration,
+                              params.storageItemCount,
+                              standard
+                            )
                           )
                         : "查看详情"}
                     </p>
@@ -466,18 +477,7 @@ export default function QuotePage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {(["normal", "moisture_proof", "valuable"] as StorageType[]).map(
                         (type) => {
-                          const dailyPrice =
-                            type === "normal"
-                              ? standard.storageNormalDaily
-                              : type === "moisture_proof"
-                              ? standard.storageMoistureProofDaily
-                              : standard.storageValuableDaily;
-                          const monthlyPrice =
-                            type === "normal"
-                              ? standard.storageNormalMonthly
-                              : type === "moisture_proof"
-                              ? standard.storageMoistureProofMonthly
-                              : standard.storageValuableMonthly;
+                          const prices = getStoragePriceDisplayApi(type, standard);
                           return (
                             <div
                               key={type}
@@ -508,13 +508,13 @@ export default function QuotePage() {
                                 <p className="text-gray-600">
                                   按天：
                                   <span className="font-semibold text-primary-600">
-                                    {formatCurrency(dailyPrice)}/件
+                                    {formatCurrency(prices.dailyPrice)}/件
                                   </span>
                                 </p>
                                 <p className="text-gray-600">
                                   按月：
                                   <span className="font-semibold text-primary-600">
-                                    {formatCurrency(monthlyPrice)}/件
+                                    {formatCurrency(prices.monthlyPrice)}/件
                                   </span>
                                 </p>
                               </div>
@@ -670,19 +670,13 @@ export default function QuotePage() {
                       </div>
                       <p className="text-2xl font-bold text-accent-600">
                         {formatCurrency(
-                          (params.billingCycle === "daily"
-                            ? params.storageType === "normal"
-                              ? standard.storageNormalDaily
-                              : params.storageType === "moisture_proof"
-                              ? standard.storageMoistureProofDaily
-                              : standard.storageValuableDaily
-                            : params.storageType === "normal"
-                            ? standard.storageNormalMonthly
-                            : params.storageType === "moisture_proof"
-                            ? standard.storageMoistureProofMonthly
-                            : standard.storageValuableMonthly) *
-                            params.storageDuration *
-                            params.storageItemCount
+                          calculateStorageSubtotalApi(
+                            params.storageType,
+                            params.billingCycle,
+                            params.storageDuration,
+                            params.storageItemCount,
+                            standard
+                          )
                         )}
                       </p>
                     </div>
@@ -733,7 +727,8 @@ export default function QuotePage() {
             </div>
             <button
               onClick={handleCreateOrder}
-              className="w-full btn-accent flex items-center justify-center gap-2 py-3 text-lg"
+              disabled={!!error}
+              className="w-full btn-accent flex items-center justify-center gap-2 py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               生成订单
               <ArrowRight className="w-5 h-5" />

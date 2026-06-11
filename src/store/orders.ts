@@ -3,6 +3,8 @@ import type { MovingOrder, OrderStatus } from "@/types";
 import { storage } from "@/utils/storage";
 import { generateOrderId } from "@/utils/calculator";
 
+const MONEY_FIELDS: (keyof MovingOrder)[] = ["totalPrice", "feeBreakdown"];
+
 interface DuplicateCheckResult {
   isDuplicate: boolean;
   duplicateOrders: MovingOrder[];
@@ -48,8 +50,12 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
   updateOrder: (id, updates) =>
     set((state) => {
+      const safeUpdates = { ...updates };
+      for (const field of MONEY_FIELDS) {
+        delete safeUpdates[field];
+      }
       const newOrders = state.orders.map((order) =>
-        order.id === id ? { ...order, ...updates } : order
+        order.id === id ? { ...order, ...safeUpdates } : order
       );
       storage.orders.set(newOrders);
       return { orders: newOrders };
