@@ -1,0 +1,103 @@
+import type { FeeStandard, QuoteParams, QuoteResult, FeeItem } from "@/types";
+
+export function calculateQuote(
+  params: QuoteParams,
+  standard: FeeStandard
+): QuoteResult {
+  const items: FeeItem[] = [];
+
+  items.push({
+    name: "起步价",
+    amount: standard.basePrice,
+    description: "基础服务费用",
+  });
+
+  const floorFromFee = params.hasElevatorFrom
+    ? params.floorFrom * standard.elevatorFloorFee
+    : params.floorFrom * standard.floorFee;
+  const floorToFee = params.hasElevatorTo
+    ? params.floorTo * standard.elevatorFloorFee
+    : params.floorTo * standard.floorFee;
+  const totalFloorFee = floorFromFee + floorToFee;
+
+  if (totalFloorFee > 0) {
+    items.push({
+      name: "楼层费",
+      amount: totalFloorFee,
+      description: `起始${params.floorFrom}层(${params.hasElevatorFrom ? "有电梯" : "无电梯"}) + 目的${params.floorTo}层(${params.hasElevatorTo ? "有电梯" : "无电梯"})`,
+    });
+  }
+
+  if (params.distance > standard.distanceBase) {
+    const extraDistance = params.distance - standard.distanceBase;
+    items.push({
+      name: "距离费",
+      amount: extraDistance * standard.distanceFee,
+      description: `超出${standard.distanceBase}公里部分，共${extraDistance}公里`,
+    });
+  } else {
+    items.push({
+      name: "距离费",
+      amount: 0,
+      description: `${params.distance}公里（含在起步价内）`,
+    });
+  }
+
+  if (params.itemCount > standard.itemBase) {
+    const extraItems = params.itemCount - standard.itemBase;
+    items.push({
+      name: "物品费",
+      amount: extraItems * standard.itemFee,
+      description: `超出${standard.itemBase}件部分，共${extraItems}件`,
+    });
+  } else {
+    items.push({
+      name: "物品费",
+      amount: 0,
+      description: `${params.itemCount}件（含在起步价内）`,
+    });
+  }
+
+  if (params.needsDisassembly) {
+    items.push({
+      name: "拆装费",
+      amount: standard.disassemblyFee,
+      description: "家具拆装服务",
+    });
+  }
+
+  if (params.hasLargeItems && params.largeItemCount > 0) {
+    items.push({
+      name: "大件物品费",
+      amount: params.largeItemCount * standard.largeItemFee,
+      description: `${params.largeItemCount}件大件物品`,
+    });
+  }
+
+  if (params.isNightService) {
+    items.push({
+      name: "夜间服务费",
+      amount: standard.nightServiceFee,
+      description: "夜间时段搬家服务",
+    });
+  }
+
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+
+  return { items, total };
+}
+
+export function formatCurrency(amount: number): string {
+  return `¥${amount.toFixed(2)}`;
+}
+
+export function generateOrderId(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const random = Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0");
+  return `BJ${year}${month}${day}${random}`;
+}
