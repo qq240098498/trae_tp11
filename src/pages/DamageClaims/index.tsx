@@ -36,6 +36,8 @@ import {
   damageStatusLabels,
   damageStatusColors,
   damageDegreeLabels,
+  damageStatusTransitions,
+  damageStatusTransitionLabels,
 } from "@/types";
 
 type ViewMode = "list" | "create" | "detail";
@@ -52,6 +54,15 @@ export default function DamageClaimsPage() {
   const [statusFilter, setStatusFilter] = useState<DamageStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<DamageType | "all">("all");
   const [showStatusMenu, setShowStatusMenu] = useState<string | null>(null);
+
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusModalData, setStatusModalData] = useState<{
+    claimId: string;
+    targetStatus: DamageStatus;
+    currentStatus: DamageStatus;
+  } | null>(null);
+  const [handlerName, setHandlerName] = useState("");
+  const [handlingNotes, setHandlingNotes] = useState("");
 
   const [formData, setFormData] = useState({
     orderId: "",
@@ -204,12 +215,48 @@ export default function DamageClaimsPage() {
     });
   };
 
-  const handleStatusChange = (claimId: string, status: DamageStatus) => {
-    updateStatus(claimId, status);
-    setShowStatusMenu(null);
-    if (selectedClaim?.id === claimId) {
-      setSelectedClaim((prev) => (prev ? { ...prev, status } : null));
+  const handleStatusChange = (claimId: string, targetStatus: DamageStatus) => {
+    const claim = claims.find((c) => c.id === claimId);
+    if (!claim) return;
+
+    const allowedTransitions = damageStatusTransitions[claim.status];
+    if (!allowedTransitions.includes(targetStatus)) {
+      alert(`当前状态不允许直接变更为「${damageStatusLabels[targetStatus]}」`);
+      return;
     }
+
+    setStatusModalData({
+      claimId,
+      targetStatus,
+      currentStatus: claim.status,
+    });
+    setHandlerName(claim.handler || "");
+    setHandlingNotes("");
+    setShowStatusMenu(null);
+    setShowStatusModal(true);
+  };
+
+  const confirmStatusChange = () => {
+    if (!statusModalData) return;
+
+    updateStatus(
+      statusModalData.claimId,
+      statusModalData.targetStatus,
+      handlerName,
+      handlingNotes
+    );
+
+    if (selectedClaim?.id === statusModalData.claimId) {
+      const updatedClaim = claims.find((c) => c.id === statusModalData.claimId);
+      if (updatedClaim) {
+        setSelectedClaim({ ...updatedClaim });
+      }
+    }
+
+    setShowStatusModal(false);
+    setStatusModalData(null);
+    setHandlerName("");
+    setHandlingNotes("");
   };
 
   const handleDelete = (claimId: string) => {
@@ -418,28 +465,42 @@ export default function DamageClaimsPage() {
                           <div className="relative">
                             <button
                               onClick={() =>
-                                setShowStatusMenu(
-                                  showStatusMenu === claim.id ? null : claim.id
-                                )
+                                damageStatusTransitions[claim.status].length > 0
+                                  ? setShowStatusMenu(
+                                      showStatusMenu === claim.id ? null : claim.id
+                                    )
+                                  : null
                               }
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 ${damageStatusColors[claim.status]}`}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 ${
+                                damageStatusColors[claim.status]
+                              } ${
+                                damageStatusTransitions[claim.status].length === 0
+                                  ? "cursor-not-allowed opacity-70"
+                                  : "cursor-pointer"
+                              }`}
                             >
                               {damageStatusLabels[claim.status]}
-                              <ChevronDown className="w-3 h-3" />
+                              {damageStatusTransitions[claim.status].length > 0 && (
+                                <ChevronDown className="w-3 h-3" />
+                              )}
                             </button>
                             {showStatusMenu === claim.id && (
-                              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10 min-w-32">
-                                {statusOptions.map((status) => (
+                              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10 min-w-36">
+                                <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                                  可执行操作
+                                </div>
+                                {damageStatusTransitions[claim.status].map((status) => (
                                   <button
                                     key={status}
                                     onClick={() => handleStatusChange(claim.id, status)}
-                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                                      claim.status === status
-                                        ? "text-primary-600 bg-primary-50"
-                                        : "text-gray-700"
-                                    }`}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-700"
                                   >
-                                    {damageStatusLabels[status]}
+                                    →{" "}
+                                    {
+                                      damageStatusTransitionLabels[claim.status][
+                                        status
+                                      ]
+                                    }
                                   </button>
                                 ))}
                               </div>
@@ -1051,74 +1112,69 @@ export default function DamageClaimsPage() {
               <div className="card">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">状态流转</h2>
                 <div className="space-y-3">
-                  {statusOptions.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChange(selectedClaim.id, status)}
-                      className={`w-full p-3 rounded-xl text-left transition-all ${
-                        selectedClaim.status === status
-                          ? "bg-primary-100 border-2 border-primary-500"
-                          : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {status === "pending" && (
-                          <Clock
-                            className={`w-5 h-5 ${
-                              selectedClaim.status === status
-                                ? "text-primary-600"
-                                : "text-gray-400"
-                            }`}
-                          />
-                        )}
-                        {status === "investigating" && (
-                          <Search
-                            className={`w-5 h-5 ${
-                              selectedClaim.status === status
-                                ? "text-primary-600"
-                                : "text-gray-400"
-                            }`}
-                          />
-                        )}
-                        {status === "approved" && (
-                          <CheckCircle
-                            className={`w-5 h-5 ${
-                              selectedClaim.status === status
-                                ? "text-primary-600"
-                                : "text-gray-400"
-                            }`}
-                          />
-                        )}
-                        {status === "rejected" && (
-                          <XCircle
-                            className={`w-5 h-5 ${
-                              selectedClaim.status === status
-                                ? "text-primary-600"
-                                : "text-gray-400"
-                            }`}
-                          />
-                        )}
-                        {status === "compensated" && (
-                          <DollarSign
-                            className={`w-5 h-5 ${
-                              selectedClaim.status === status
-                                ? "text-primary-600"
-                                : "text-gray-400"
-                            }`}
-                          />
-                        )}
-                        <span
-                          className={`font-medium ${
-                            selectedClaim.status === status
-                              ? "text-primary-700"
-                              : "text-gray-700"
-                          }`}
+                  <div
+                    className={`w-full p-3 rounded-xl text-left bg-primary-100 border-2 border-primary-500`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {selectedClaim.status === "pending" && (
+                        <Clock className="w-5 h-5 text-primary-600" />
+                      )}
+                      {selectedClaim.status === "investigating" && (
+                        <Search className="w-5 h-5 text-primary-600" />
+                      )}
+                      {selectedClaim.status === "approved" && (
+                        <CheckCircle className="w-5 h-5 text-primary-600" />
+                      )}
+                      {selectedClaim.status === "rejected" && (
+                        <XCircle className="w-5 h-5 text-primary-600" />
+                      )}
+                      {selectedClaim.status === "compensated" && (
+                        <DollarSign className="w-5 h-5 text-primary-600" />
+                      )}
+                      <span className="font-medium text-primary-700">
+                        当前：{damageStatusLabels[selectedClaim.status]}
+                      </span>
+                    </div>
+                  </div>
+
+                  {damageStatusTransitions[selectedClaim.status].length > 0 ? (
+                    <>
+                      <p className="text-sm text-gray-500 mt-4 mb-2">可执行操作：</p>
+                      {damageStatusTransitions[selectedClaim.status].map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => handleStatusChange(selectedClaim.id, status)}
+                          className="w-full p-3 rounded-xl text-left bg-gray-50 hover:bg-gray-100 border-2 border-transparent transition-all"
                         >
-                          {damageStatusLabels[status]}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                          <div className="flex items-center gap-3">
+                            {status === "pending" && (
+                              <Clock className="w-5 h-5 text-gray-400" />
+                            )}
+                            {status === "investigating" && (
+                              <Search className="w-5 h-5 text-gray-400" />
+                            )}
+                            {status === "approved" && (
+                              <CheckCircle className="w-5 h-5 text-gray-400" />
+                            )}
+                            {status === "rejected" && (
+                              <XCircle className="w-5 h-5 text-gray-400" />
+                            )}
+                            {status === "compensated" && (
+                              <DollarSign className="w-5 h-5 text-gray-400" />
+                            )}
+                            <span className="font-medium text-gray-700">
+                              → {damageStatusTransitionLabels[selectedClaim.status][status]}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="text-center py-4 text-gray-400 text-sm">
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>该状态为最终状态，无法再变更</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1139,6 +1195,104 @@ export default function DamageClaimsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStatusModal && statusModalData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 animate-scale-in">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">确认状态变更</h2>
+                <button
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    setStatusModalData(null);
+                    setHandlerName("");
+                    setHandlingNotes("");
+                  }}
+                  className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${damageStatusColors[statusModalData.currentStatus]}`}
+                  >
+                    {damageStatusLabels[statusModalData.currentStatus]}
+                  </span>
+                  <span className="text-gray-400">→</span>
+                  <span
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${damageStatusColors[statusModalData.targetStatus]}`}
+                  >
+                    {damageStatusLabels[statusModalData.targetStatus]}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-primary-50 rounded-xl">
+                <p className="text-sm text-primary-700">
+                  <span className="font-semibold">操作：</span>
+                  {
+                    damageStatusTransitionLabels[statusModalData.currentStatus][
+                      statusModalData.targetStatus
+                    ]
+                  }
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  处理人
+                </label>
+                <input
+                  type="text"
+                  value={handlerName}
+                  onChange={(e) => setHandlerName(e.target.value)}
+                  className="input-field"
+                  placeholder="请输入处理人姓名"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-gray-400" />
+                  处理备注
+                </label>
+                <textarea
+                  value={handlingNotes}
+                  onChange={(e) => setHandlingNotes(e.target.value)}
+                  className="input-field min-h-24 resize-none"
+                  placeholder="请输入处理备注（可选）..."
+                  rows={4}
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowStatusModal(false);
+                  setStatusModalData(null);
+                  setHandlerName("");
+                  setHandlingNotes("");
+                }}
+                className="btn-secondary flex-1"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmStatusChange}
+                className="btn-accent flex-1"
+              >
+                确认变更
+              </button>
             </div>
           </div>
         </div>

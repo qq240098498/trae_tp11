@@ -162,3 +162,49 @@ export const damageDegreeLabels: Record<DamageItem["damageDegree"], string> = {
   severe: "严重损坏",
   total_loss: "完全损坏/丢失",
 };
+
+export const damageStatusTransitions: Record<DamageStatus, DamageStatus[]> = {
+  pending: ["investigating"],
+  investigating: ["pending", "approved", "rejected"],
+  approved: ["investigating", "compensated"],
+  rejected: [],
+  compensated: [],
+};
+
+export const damageStatusTransitionLabels: Record<DamageStatus, Record<DamageStatus, string>> = {
+  pending: {
+    pending: "待处理",
+    investigating: "开始调查",
+    approved: "确认赔偿",
+    rejected: "驳回申请",
+    compensated: "完成赔偿",
+  },
+  investigating: {
+    pending: "退回待处理",
+    investigating: "调查中",
+    approved: "确认赔偿",
+    rejected: "驳回申请",
+    compensated: "完成赔偿",
+  },
+  approved: {
+    pending: "退回待处理",
+    investigating: "重新调查",
+    approved: "已确认",
+    rejected: "驳回申请",
+    compensated: "完成赔偿",
+  },
+  rejected: {
+    pending: "待处理",
+    investigating: "调查中",
+    approved: "确认赔偿",
+    rejected: "已驳回",
+    compensated: "完成赔偿",
+  },
+  compensated: {
+    pending: "待处理",
+    investigating: "调查中",
+    approved: "确认赔偿",
+    rejected: "驳回申请",
+    compensated: "已赔偿",
+  },
+};
